@@ -66,6 +66,21 @@
 | `china-domains.list`（或可带 `-1`、`-2` 后缀） | **仅域名**，一行一个；由 `domain-set -file` 引用。文件名与上游无关，可改 `SMARTDNS_LIST_BASENAME` |
 | `adguard-upstream-china.txt` | AdGuard Home 的「上游」列表或 `upstream_dns_file` 内容：`[/域名1/域名2/.../]IP`，每行最多 `AG_BATCH` 个域名（同一 IP） |
 
+以下为 **`main` 分支** 上 `out/` 的 Raw 地址（可直接 `curl -O` 或在路由器里填 URL；若你使用 fork 或其它分支，请把路径中的用户名、仓库名或 `main` 改成自己的）：
+
+| 文件 | Raw 下载地址 |
+|------|--------------|
+| dnsmasq | [dnsmasq-china.conf](https://raw.githubusercontent.com/wuchang1123/cn-dns-conf/main/out/dnsmasq-china.conf) |
+| SmartDNS | [smartdns-china.conf](https://raw.githubusercontent.com/wuchang1123/cn-dns-conf/main/out/smartdns-china.conf) |
+| 纯域名列表 | [china-domains.list](https://raw.githubusercontent.com/wuchang1123/cn-dns-conf/main/out/china-domains.list) |
+| AdGuard Home | [adguard-upstream-china.txt](https://raw.githubusercontent.com/wuchang1123/cn-dns-conf/main/out/adguard-upstream-china.txt) |
+
+直链模板（自行替换 `OWNER`、`REPO`、分支名）：
+
+```text
+https://raw.githubusercontent.com/OWNER/REPO/main/out/<文件名>
+```
+
 ### dnsmasq 说明
 
 - 与上游列表语义一致，仅去掉注释并按合并规则去重；使用 `conf-file` 引入即可。
