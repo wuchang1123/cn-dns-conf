@@ -15,14 +15,15 @@ INPUT_DIR="${INPUT_DIR:-${SCRIPT_DIR}/upstream}"
 OUT_DIR="${OUT_DIR:-${SCRIPT_DIR}/out}"
 
 usage() {
-  echo "Usage: ${0##*/} [options] [<dns_ip> <dns_alias>]"
+  echo "Usage: ${0##*/} [options] [<dns_ip> [<dns_alias>]]"
   echo "  Options: --no-download, -h, --help"
-  echo "  With dns_ip + dns_alias: use that upstream IP and SmartDNS group name for all domains."
-  echo "  Without: use IP from each dnsmasq line and auto group names (g_a_b_c_d)."
+  echo "  With dns_ip only: use that upstream for all domains; SmartDNS group defaults to g_a_b_c_d from IP."
+  echo "  With dns_ip + dns_alias: same, but SmartDNS -g uses dns_alias."
+  echo "  Without: use IP from each dnsmasq line and auto group names per upstream."
   echo "  Env: BASE_URL, INPUT_DIR, OUT_DIR"
   echo "       AG_BATCH (default 8: AdGuard + dnsmasq domains per line, same upstream IP)"
   echo "       SMARTDNS_DOMAINSET=yes|no (default yes: domain-set + list files, compact)"
-  echo "       SMARTDNS_LIST_BASENAME (default china-domains: domain list files, not DNS-related)"
+  echo "       SMARTDNS_LIST_BASENAME (default china-domains: full domain list basename, not DNS-related)"
   exit "${1:-0}"
 }
 
@@ -47,11 +48,9 @@ if [[ ${#POS[@]} -gt 2 ]]; then
   echo "Too many arguments: ${POS[*]}" >&2
   usage 1
 fi
-if [[ -n "$DNS_IP" || -n "$DNS_ALIAS" ]]; then
-  if [[ -z "$DNS_IP" || -z "$DNS_ALIAS" ]]; then
-    echo "Specify both <dns_ip> and <dns_alias>, or neither." >&2
-    exit 1
-  fi
+if [[ -z "$DNS_IP" && -n "$DNS_ALIAS" ]]; then
+  echo "<dns_alias> requires <dns_ip> first." >&2
+  exit 1
 fi
 
 mkdir -p "$INPUT_DIR" "$OUT_DIR"
@@ -123,9 +122,12 @@ case "$SMARTDNS_DOMAINSET" in
 esac
 
 shopt -s nullglob 2>/dev/null || true
-# Domain lists are named by SMARTDNS_LIST_BASENAME (China domains only); drop legacy cn_* names.
-rm -f "$OUT_DIR/${SMARTDNS_LIST_BASENAME}.list" "$OUT_DIR/${SMARTDNS_LIST_BASENAME}"-*.list \
+# china-domains.list = full domain list (upstream-agnostic). Legacy names + SmartDNS-only splits.
+rm -f "$OUT_DIR"/smartdns-domains_*.list "$OUT_DIR/${SMARTDNS_LIST_BASENAME}"-*.list \
   "$OUT_DIR"/cn_*.list 2>/dev/null || true
+
+# Full domain column only (for download / reference); independent of SmartDNS upstream grouping.
+awk -F'\t' '{print $1}' "$TMP_MERGED" >"$OUT_DIR/${SMARTDNS_LIST_BASENAME}.list"
 
 awk -v out_smart="$OUT_DIR/smartdns-china.conf" -v outdir="$OUT_DIR" \
   -v override_ip="$DNS_IP" -v override_alias="$DNS_ALIAS" \
@@ -140,9 +142,18 @@ function group_name(ip,   a, n, i, s) {
   gsub(/[^0-9A-Za-z]/, "_", ip)
   return "g_" ip
 }
+function override_group() {
+  if (override_alias != "") return override_alias
+  return group_name(override_ip)
+}
+function ds_path_file_for_group(gg,   s) {
+  s = gg
+  gsub(/[^a-zA-Z0-9._-]/, "_", s)
+  return outdir "/smartdns-domains_" s ".list"
+}
 function ds_path(idx, ngrp) {
   if (ngrp == 1) return outdir "/" listbase ".list"
-  return outdir "/" listbase "-" idx ".list"
+  return ds_path_file_for_group(order[idx])
 }
 function ds_setname(idx, ngrp,   t) {
   t = listbase
@@ -159,8 +170,8 @@ BEGIN {
     print "# Domain lists are China domain names only; -g GROUP ties to server lines below." > out_smart
   }
   if (override_ip != "") {
-    print "# Override: server " override_ip " group " override_alias > out_smart
-    print "server " override_ip ":53 -g " override_alias " -e" > out_smart
+    print "# Override: server " override_ip " group " override_group() > out_smart
+    print "server " override_ip ":53 -g " override_group() " -e" > out_smart
   }
 }
 {
@@ -168,7 +179,7 @@ BEGIN {
   ip = $2
   if (override_ip != "") {
     ip = override_ip
-    g = override_alias
+    g = override_group()
   } else {
     g = group_name(ip)
   }
@@ -192,7 +203,7 @@ END {
     ip = a[2]
     if (override_ip != "") {
       ip = override_ip
-      g = override_alias
+      g = override_group()
     } else {
       g = group_name(ip)
     }
@@ -207,11 +218,13 @@ END {
     domain = a[1]
     ip = a[2]
     if (override_ip != "") {
-      g = override_alias
+      g = override_group()
     } else {
       g = group_name(ip)
     }
     path = ds_path(gidx[g], n)
+    fulllist = outdir "/" listbase ".list"
+    if (n == 1 && path == fulllist) continue
     print domain >> path
     listpath[path] = 1
   }
@@ -319,9 +332,10 @@ END {
 echo "Wrote:"
 echo "  $OUT_DIR/dnsmasq-china.conf"
 echo "  $OUT_DIR/smartdns-china.conf"
+echo "  $OUT_DIR/${SMARTDNS_LIST_BASENAME}.list"
 if [[ "$SMARTDNS_DOMAINSET" -eq 1 ]]; then
   shopt -s nullglob
-  for _f in "$OUT_DIR/${SMARTDNS_LIST_BASENAME}.list" "$OUT_DIR/${SMARTDNS_LIST_BASENAME}"-*.list; do
+  for _f in "$OUT_DIR"/smartdns-domains_*.list; do
     [[ -f "$_f" ]] && echo "  $_f"
   done
 fi

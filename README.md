@@ -35,14 +35,15 @@
 
 ### 统一指定上游（可选）
 
-将**所有域名**指向你指定的 DNS，并在 SmartDNS 里使用你给定的**上游组名**：
+将**所有域名**指向你指定的 DNS IP。第二个参数 **`<dns_alias>` 可省略**：省略时 SmartDNS 的 `-g` 组名与「按 IP 自动生成」规则一致（IPv4 为 `g_a_b_c_d`，例如 `223.5.5.5` → `g_223_5_5_5`）；提供别名则使用该名称（如 `alidns`）。
 
 ```bash
-./convert-dnsmasq-china.sh 223.5.5.5 alidns
+./convert-dnsmasq-china.sh 223.5.5.5          # 组名默认 g_223_5_5_5
+./convert-dnsmasq-china.sh 223.5.5.5 alidns # 组名为 alidns
 ```
 
-必须**同时**提供 `<dns_ip>` 与 `<dns_alias>`，或**都不**提供。  
-指定后 **dnsmasq**、**AdGuard** 里每条规则的上游 IP 均使用该地址；**SmartDNS** 里 `server` 与组名仍按该参数生效。
+只写别名、不写 IP 会报错。不提供任何位置参数时，仍按各 dnsmasq 行里的 IP 与对应组名处理。  
+指定 IP 后 **dnsmasq**、**AdGuard** 里每条规则的上游均为该地址；**SmartDNS** 的 `server … -g` 与 `nameserver …/组名` 使用上述组名规则。
 
 ## 环境变量
 
@@ -53,7 +54,7 @@
 | `OUT_DIR` | `<脚本目录>/out` | 生成文件输出目录 |
 | `AG_BATCH` | `8` | **同一上游 IP** 下每行合并的域名个数：AdGuard（`[/d1/d2/.../]upstream`）与 dnsmasq（`server=/d1/d2/.../ip`）共用 |
 | `SMARTDNS_DOMAINSET` | `yes` | `yes`：用 `domain-set` + 列表文件（紧凑）；`no`：每个域名一行 `nameserver` |
-| `SMARTDNS_LIST_BASENAME` | `china-domains` | 仅域名列表的文件名前缀（与 DNS 无关）；多上游组时为 `basename-1.list`、`basename-2.list` 等 |
+| `SMARTDNS_LIST_BASENAME` | `china-domains` | 全量域名列表文件名前缀（与 DNS 无关）：始终为 `basename.list` |
 
 ## 输出文件
 
@@ -63,7 +64,8 @@
 |------|------|
 | `dnsmasq-china.conf` | dnsmasq 片段：每行最多 `AG_BATCH` 个域名，`server=/d1/d2/.../IP`（与 AdGuard 分批规则相同）；`conf-file=/绝对路径/dnsmasq-china.conf` |
 | `smartdns-china.conf` | SmartDNS 片段：在 `smartdns.conf` 里用 `conf-file /绝对路径/smartdns-china.conf` 引入 |
-| `china-domains.list`（或可带 `-1`、`-2` 后缀） | **仅域名**，一行一个；由 `domain-set -file` 引用。文件名与上游无关，可改 `SMARTDNS_LIST_BASENAME` |
+| `china-domains.list` | **全量域名**（一行一个），与使用哪台上游 DNS 无关；可改 `SMARTDNS_LIST_BASENAME`。单套上游时 SmartDNS 的 `domain-set -file` 也指向此文件 |
+| `smartdns-domains_<组名>.list` | 仅当合并结果里存在**多套上游 IP** 时生成，供 SmartDNS 按组分区的 `domain-set` 使用；不影响 `china-domains.list` 的语义 |
 | `adguard-upstream-china.txt` | AdGuard Home 的「上游」列表或 `upstream_dns_file` 内容：`[/域名1/域名2/.../]IP`，每行最多 `AG_BATCH` 个域名（同一 IP） |
 
 以下为 **`main` 分支** 上 `out/` 的 Raw 地址（可直接 `curl -O` 或在路由器里填 URL；若你使用 fork 或其它分支，请把路径中的用户名、仓库名或 `main` 改成自己的）：
@@ -89,7 +91,8 @@ https://raw.githubusercontent.com/OWNER/REPO/main/out/<文件名>
 ### SmartDNS 说明
 
 - 默认模式用官方 [域名集合（domain-set）](https://pymumu.github.io/smartdns/config/domain-rule/)：`domain-set` 指向列表文件，`nameserver /domain-set:集合名/上游组名` 把「中国域名」指到对应 `server … -g 组名`。
-- 列表文件只含域名；**上游 IP 与组名**仍在 `server` / `nameserver` 的 **GROUP** 部分（例如 `g_114_114_114_114`）。
+- **`china-domains.list`** 始终为全量域名表，与上游无关。仅一套上游时，`domain-set -file` 即该文件。多套上游时，会额外生成 **`smartdns-domains_<组名>.list`**（组名中的非安全字符会替换为 `_`），仅用于 SmartDNS 分区，**不再**使用 `china-domains-1.list` 这类命名。
+- **上游 IP 与组名**仍在 `server` / `nameserver` 的 **GROUP** 部分（例如 `g_114_114_114_114`）。
 
 ### AdGuard Home 说明
 
