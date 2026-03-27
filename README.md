@@ -57,7 +57,7 @@
 
 ## 输出文件
 
-均在 `OUT_DIR`（默认 `out/`）下：
+均在 `OUT_DIR`（默认 `out/`）下。**本仓库已跟踪 `out/`**，可直接从 GitHub 浏览或下载（例如 Raw 链接），无需本地跑脚本。若上游列表有更新，可执行 `./convert-dnsmasq-china.sh` 后重新提交 `out/`。
 
 | 文件 | 说明 |
 |------|------|
@@ -96,7 +96,9 @@ SMARTDNS_DOMAINSET=no ./convert-dnsmasq-china.sh --no-download
 
 ## 克隆与生成
 
-本仓库仅包含脚本与说明；`upstream/`、`out/` 由 `.gitignore` 忽略。克隆后执行：
+- `upstream/` 仍由 `.gitignore` 忽略（体积大，随脚本下载即可）。
+- `out/` 已纳入 Git，克隆后可直接使用 `out/` 内文件。
+- 需要与上游同步时在本机执行：
 
 ```bash
 ./convert-dnsmasq-china.sh
@@ -109,7 +111,7 @@ SMARTDNS_DOMAINSET=no ./convert-dnsmasq-china.sh --no-download
 
 ```bash
 git init
-git add convert-dnsmasq-china.sh README.md .gitignore
+git add convert-dnsmasq-china.sh README.md .gitignore out/
 git commit -m "Initial commit: dnsmasq-china-list converter"
 git branch -M main
 git remote add origin https://github.com/<你的用户名>/<仓库名>.git
