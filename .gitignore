@@ -1,0 +1,10 @@
+# Generated outputs
+out/
+
+# Downloaded upstream lists (re-fetch with the script)
+upstream/
+
+# OS / editor
+.DS_Store
+*.swp
+*~
