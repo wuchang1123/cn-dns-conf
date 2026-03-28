@@ -17,8 +17,8 @@ OUT_DIR="${OUT_DIR:-${SCRIPT_DIR}/out}"
 usage() {
   echo "Usage: ${0##*/} [options] [<dns_ip> [<dns_alias>]]"
   echo "  Options: --no-download, -h, --help"
-  echo "  With dns_ip only: use that upstream for all domains; SmartDNS group defaults to g_a_b_c_d from IP."
-  echo "  With dns_ip + dns_alias: same, but SmartDNS -g uses dns_alias."
+  echo "  With dns_ip only: use that upstream for all domains; SmartDNS -g defaults to \"default\"."
+  echo "  With dns_ip + dns_alias: SmartDNS -g uses dns_alias (e.g. alidns)."
   echo "  Without: use IP from each dnsmasq line and auto group names per upstream."
   echo "  Env: BASE_URL, INPUT_DIR, OUT_DIR"
   echo "       AG_BATCH (default 8: AdGuard + dnsmasq domains per line, same upstream IP)"
@@ -51,6 +51,9 @@ fi
 if [[ -z "$DNS_IP" && -n "$DNS_ALIAS" ]]; then
   echo "<dns_alias> requires <dns_ip> first." >&2
   exit 1
+fi
+if [[ -n "$DNS_IP" && -z "$DNS_ALIAS" ]]; then
+  DNS_ALIAS="default"
 fi
 
 mkdir -p "$INPUT_DIR"

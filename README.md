@@ -36,15 +36,15 @@
 
 ### 统一指定上游（可选）
 
-将**所有域名**指向你指定的 DNS IP。第二个参数 **`<dns_alias>` 可省略**：省略时 SmartDNS 的 `-g` 组名与「按 IP 自动生成」规则一致（IPv4 为 `g_a_b_c_d`，例如 `223.5.5.5` → `g_223_5_5_5`）；提供别名则使用该名称（如 `alidns`）。
+将**所有域名**指向你指定的 DNS IP。第二个参数 **`<dns_alias>` 可省略**：省略时 SmartDNS 的 `-g` 组名为 **`default`**；需要自定义组名时再传入（如 `alidns`）。
 
 ```bash
-./convert-dnsmasq-china.sh 223.5.5.5          # 组名默认 g_223_5_5_5
-./convert-dnsmasq-china.sh 223.5.5.5 alidns # 组名为 alidns
+./convert-dnsmasq-china.sh 223.5.5.5           # -g default
+./convert-dnsmasq-china.sh 223.5.5.5 alidns    # -g alidns
 ```
 
 只写别名、不写 IP 会报错。不提供任何位置参数时，仍按各 dnsmasq 行里的 IP 与对应组名处理。  
-指定 IP 后 **dnsmasq**、**AdGuard** 里每条规则的上游均为该地址；**SmartDNS** 的 `server … -g` 与 `nameserver …/组名` 使用上述组名规则。
+指定 IP 后 **dnsmasq**、**AdGuard** 里每条规则的上游均为该地址；**SmartDNS** 的 `server … -g` 与 `nameserver …/组名` 使用上述别名（默认可为 `default`）。
 
 ## 环境变量
 
